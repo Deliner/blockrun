@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import BlockRun
 
 main :: IO ()
-main = someFunc
+main = runBlockRun

@@ -37,9 +37,9 @@ runBlockRun = do
     g <- newStdGen
     play display bgColor fps (initWorld g) drawWorld handleWorld updateWorld
     where
-    display = InWindow "BlockRun" (round screenWidth, round screenHeight) (1480, 770)
+    display = InWindow "BlockRun" (round screenWidth, round screenHeight) (100, 100)
     bgColor = white
-    fps     = 60
+    fps = 60
 
 
 initWorld :: StdGen -> World
@@ -123,17 +123,7 @@ absoluteSpikes :: [Spike] -> [Spike]
 absoluteSpikes = go 0
   where
     go _ [] = []
-    go s (obj : objs) =
-      obj {spikeX = spikeX obj + s} :
-      go
-        ( if s < 2000
-            then s + objects_initial_difference + spikeX obj
-            else
-              if s < 10000
-                then s + objects_initial_difference * 3 + spikeX obj
-                else s + objects_initial_difference * 30 + spikeX obj
-        )
-        objs
+    go s (spikeH : spikeT) = spikeH {spikeX = spikeX spikeH + s} : go ( s + spikeRange + spikeX spikeH ) spikeT
 
 drawSpikes :: [Spike] -> Picture
 drawSpikes = Pictures . map drawNSpikes . takeWhile onScreen . absoluteSpikes
@@ -200,7 +190,7 @@ updateWorld dt world
             { playerY = movePlayer (player world) dt,
               playerSpeed = if playerSpeed (player world) < -jumpSpeed then 0 else playerSpeed (player world) - gravity*dt
             },
-        worldSpeed = worldSpeed world + 0.1 * score world,
+        worldSpeed = spikeSpeed + 5 * score world,
         spikeIter = moveSpikes (worldSpeed world) dt (spikeIter world),
         score = score world + dt
       }
@@ -219,7 +209,7 @@ moveSpikes speed dt (spikeH : spikeT)
   | dx > pos = spikeT
   | otherwise = spikeH {spikeX = spikeX spikeH - dx} : spikeT
   where
-    pos = spikeX spikeH + objects_initial_difference
+    pos = spikeX spikeH + spikeRange
     dx = dt * speed
 
 checkGameOver :: World ->  Bool
@@ -232,7 +222,7 @@ checkCollision ::  (Float, Float) -> Spike -> Bool
 checkCollision (playerX, playerY) spike =
   playerX >= (spikeX spike - spikeWidth)
     && playerX <= (spikeX spike + fromIntegral (spikeNum spike) * spikeWidth)
-    && playerY <= screenHeight + spikeHeight
+    && playerY <= bottomOffset + spikeHeight
 
 
 spikeInterval :: (Float, Float)
@@ -244,8 +234,8 @@ spikeCount = (1,3)
 spikeWidth :: Float
 spikeWidth = 20
 
-objects_initial_difference :: Float
-objects_initial_difference = 300
+spikeRange :: Float
+spikeRange = 300
 
 spikeHeight :: Float
 spikeHeight = 20
@@ -269,7 +259,7 @@ bottomOffset :: Float
 bottomOffset = - (screenWidth / 4) + spikeHeight
 
 gravity:: Float
-gravity = 100
+gravity = jumpSpeed * 2
 
 jumpSpeed :: Float
-jumpSpeed = 200
+jumpSpeed = playerSize * 10

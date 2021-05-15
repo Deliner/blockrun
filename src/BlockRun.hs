@@ -59,6 +59,23 @@ initWorld g = World
     }
 }
 
+resetWorld :: World -> World
+resetWorld world = World
+  {
+    player = Player {
+        playerSpeed = 0,
+        playerX = playerXOffset,
+        playerY = bottomOffset
+    },
+    spikeIter = tail (spikeIter world),
+    score = 0,
+    worldSpeed = spikeSpeed,
+    state = State {
+        isMainMenu = True,
+        isGameOver = False
+    }
+}
+
 initSpikes :: StdGen -> [Spike]
 initSpikes g =  zipWith initSpike (randomRs spikeInterval g) (randomRs spikeCount g)
 
@@ -71,34 +88,35 @@ initSpike x num = Spike {
 
 drawWorld :: World -> Picture
 drawWorld world
-    | isMainMenu (state world) =  pictures
+    | isMainMenu (state world) =  Pictures
         [ Translate (- screenWidth /6) (screenHeight / 10) . Scale 0.6 0.6 . Text $ "BlockRun",
-            Translate (- screenWidth /7) (-screenHeight / 10) . Scale 0.15 0.15 . Text $ "Press 'Enter' to start"
+          Translate (- screenWidth /7) (-screenHeight / 10) . Scale 0.15 0.15 . Text $ "Press 'Enter' to start"
         ]
-    | isGameOver (state world) = pictures
+    | isGameOver (state world) = Pictures
         [ Translate (- screenWidth / 7) 0 . Color red . Scale 0.4 0.4 . Text $ "GAME OVER",
-            Translate (- screenWidth / 8) (-screenHeight / 10) . Scale 0.2 0.2 . Text $ "Score: " ++ currentScore,
-            Translate (- screenWidth / 8) (-screenHeight / 6) . Scale 0.1 0.1 . Text $ "Press 'Enter' to restart"
+          Translate (- screenWidth / 8) (-screenHeight / 10) . Scale 0.2 0.2 . Text $ "Score: " ++ currentScore,
+          Translate (- screenWidth / 8) (-screenHeight / 6) . Scale 0.1 0.1 . Text $ "Press 'Enter' to restart"
         ]
-    | otherwise = pictures [
-        drawSpikes (spikeIter world),
-        drawPlayer (player world),
-        drawScore (score world)
+    | otherwise = Pictures
+        [
+          drawSpikes (spikeIter world),
+          drawPlayer (player world),
+          drawScore (score world)
         ]
     where
       currentScore = show . round $ score world
 
 drawPlayer :: Player -> Picture
 drawPlayer player =
-  translate
+  Translate
       (playerX player)
       (playerY player)
-      ( Color black $
-          Scale 120 120 $
-            Polygon [ ( 0.10, 0.10)
-          , (-0.10, 0.10)
-          , (-0.10, -0.10)
-          , ( 0.10, -0.10)]
+      ( Color black $ Polygon
+          [ ( playerSize / 2, playerSize / 2)
+          , (-playerSize / 2, playerSize / 2)
+          , (-playerSize / 2, -playerSize / 2)
+          , ( playerSize / 2, -playerSize / 2)
+          ]
       )
 
 absoluteSpikes :: [Spike] -> [Spike]
@@ -118,7 +136,7 @@ absoluteSpikes = go 0
         objs
 
 drawSpikes :: [Spike] -> Picture
-drawSpikes = pictures . map drawNSpikes . takeWhile onScreen . absoluteSpikes
+drawSpikes = Pictures . map drawNSpikes . takeWhile onScreen . absoluteSpikes
   where
     onScreen spike = spikeX spike < screenWidth
 
@@ -126,40 +144,34 @@ drawNSpikes :: Spike -> Picture
 drawNSpikes spike
   | spikeNum spike == 1 = drawSpike spike 0
   | spikeNum spike == 3 =
-    pictures
+    Pictures
       [ drawSpike spike 0,
         drawSpike spike spikeWidth,
         drawSpike spike (spikeWidth * 2)
       ]
   | otherwise =
-    pictures
+    Pictures
       [ drawSpike spike 0,
         drawSpike spike spikeWidth
       ]
 
 drawSpike :: Spike -> Float -> Picture
-drawSpike spike offset = translate x y
-    ( Color black $ Scale 120 120 $
-        Polygon  [ (0.0,0.1)
-            , (-0.10, -0.10)
-            , (0.10,-0.10)
-        ]
+drawSpike spike offset = Translate x y
+    ( Color black $ Polygon
+      [ (0.0, playerSize / 2)
+      , (- playerSize / 2, - playerSize / 2)
+      , (playerSize / 2, - playerSize / 2)
+      ]
     )
     where
         x = spikeX spike + offset
         y = spikeY spike
 
 drawScore :: Float -> Picture
-drawScore score = translate x y
-    ( scale
-        20
-        20
-        ( pictures
-            [translate 2 (-1.5) (scale 0.01 0.01 (color black (text (show (round score)))))]
-        )
-    )
+drawScore score = Translate x y
+    ( Pictures [scale 0.2 0.2 (Color black (text (show (round score))))] )
     where
-        x = - (screenWidth / 2) + 20
+        x = - (screenWidth / 2) + 10
         y = screenHeight / 2 - 25
 
 handleWorld :: Event -> World -> World
@@ -172,27 +184,10 @@ handleWorld event world
     _ -> world
   | otherwise = case event of
     (EventKey (SpecialKey KeySpace) Down _ _) ->
-      if playerY (player world) /= screenHeight
+      if playerY (player world) > bottomOffset
         then world
-        else world {player = (player world) { playerY = playerY (player world) + 1}}
+        else world {player = (player world) { playerSpeed = jumpSpeed}}
     _ -> world
-
-resetWorld :: World -> World
-resetWorld world = World
-  {
-    player = Player {
-        playerSpeed = 0,
-        playerX = playerXOffset,
-        playerY = bottomOffset
-    },
-    spikeIter = tail (spikeIter world),
-    score = 0,
-    worldSpeed = spikeSpeed,
-    state = State {
-        isMainMenu = True,
-        isGameOver = False
-    }
-}
 
 updateWorld :: Float -> World -> World
 updateWorld dt world
@@ -203,20 +198,19 @@ updateWorld dt world
       { player =
           (player world)
             { playerY = movePlayer (player world) dt,
-              playerSpeed = if playerY (player world) == bottomOffset then 0 else playerSpeed (player world) - gravity*dt
+              playerSpeed = if playerSpeed (player world) < -jumpSpeed then 0 else playerSpeed (player world) - gravity*dt
             },
-        worldSpeed = worldSpeed world + score world,
+        worldSpeed = worldSpeed world + 0.1 * score world,
         spikeIter = moveSpikes (worldSpeed world) dt (spikeIter world),
         score = score world + dt
       }
 
-
 movePlayer :: Player -> Float -> Float
-movePlayer player dt 
+movePlayer player dt
   | playerBelow player = bottomOffset
   | otherwise = playerY player + dt * playerSpeed player
     where
-      playerBelow :: Player -> Bool 
+      playerBelow :: Player -> Bool
       playerBelow player = playerY player + dt * playerSpeed player < bottomOffset
 
 moveSpikes :: Float -> Float -> [Spike] -> [Spike]
@@ -275,7 +269,7 @@ bottomOffset :: Float
 bottomOffset = - (screenWidth / 4) + spikeHeight
 
 gravity:: Float
-gravity = -60
+gravity = 100
 
 jumpSpeed :: Float
 jumpSpeed = 200

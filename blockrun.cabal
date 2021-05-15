@@ -25,13 +25,15 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      BlockRun
   other-modules:
       Paths_blockrun
   hs-source-dirs:
       src
   build-depends:
       base >=4.7 && <5
+    , gloss
+    , random
   default-language: Haskell2010
 
 executable blockrun-exe
@@ -44,6 +46,8 @@ executable blockrun-exe
   build-depends:
       base >=4.7 && <5
     , blockrun
+    , gloss
+    , random
   default-language: Haskell2010
 
 test-suite blockrun-test
@@ -57,4 +61,6 @@ test-suite blockrun-test
   build-depends:
       base >=4.7 && <5
     , blockrun
+    , gloss
+    , random
   default-language: Haskell2010

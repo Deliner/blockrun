@@ -66,7 +66,7 @@ moveSpikes speed dt (spikeH : spikeT)
   | dx > pos = spikeT
   | otherwise = spikeH {spikeX = spikeX spikeH - dx} : spikeT
   where
-    pos = spikeX spikeH + spikeRange + 3 * spikeWidth
+    pos = spikeX spikeH + spikeRange
     dx = dt * speed
 
 checkGameOver :: World ->  Bool

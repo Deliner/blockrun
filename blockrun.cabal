@@ -26,6 +26,11 @@ source-repository head
 library
   exposed-modules:
       BlockRun
+      Collision
+      Const
+      DataTypes
+      Draw
+      Init
   other-modules:
       Paths_blockrun
   hs-source-dirs:

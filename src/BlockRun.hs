@@ -209,7 +209,7 @@ moveSpikes speed dt (spikeH : spikeT)
   | dx > pos = spikeT
   | otherwise = spikeH {spikeX = spikeX spikeH - dx} : spikeT
   where
-    pos = spikeX spikeH + spikeRange
+    pos = spikeX spikeH + spikeRange + 3 * spikeWidth
     dx = dt * speed
 
 checkGameOver :: World ->  Bool
@@ -235,7 +235,7 @@ spikeWidth :: Float
 spikeWidth = 20
 
 spikeRange :: Float
-spikeRange = 300
+spikeRange = screenWidth / 2
 
 spikeHeight :: Float
 spikeHeight = 20
